@@ -255,9 +255,6 @@
         isOverlay = false,
         uniformMinHeightPx = null,
       }) {
-        const desc = (item?.description || "").trim();
-        const hasDesc = desc.length > 0;
-  
         const combinedRef = (node) => {
           if (typeof setNodeRef === "function") {
             setNodeRef(node);
@@ -269,16 +266,13 @@
           cardInnerStyle.minHeight = `${uniformMinHeightPx}px`;
         }
   
-        const cardClass = `rank-item rank-item--inline-desc${
+        const cardClass = `rank-item${
           isDragging ? " rank-item--dragging" : ""
         }${isOverlay ? " rank-item--overlay" : ""}`;
   
         const nameForA11y = capitalizeFirstLetter(item?.name ?? "");
         const pos = Number.isFinite(listPosition) ? listPosition : 0;
-        const rowLabel =
-          pos > 0
-            ? `Позиция ${pos}: ${nameForA11y}${hasDesc ? `. ${capitalizeFirstLetter(desc)}` : ""}`
-            : nameForA11y;
+        const rowLabel = pos > 0 ? `Позиция ${pos}: ${nameForA11y}` : nameForA11y;
   
         return h(
           "li",
@@ -295,33 +289,20 @@
             { className: cardClass, style: cardInnerStyle },
             h(
               "div",
-              { className: "rank-item-text rank-item-text--stack" },
+              { className: "rank-item-text" },
               h("span", { className: "value-name" }, capitalizeFirstLetter(item?.name ?? "")),
-              hasDesc
+              /*
+              (item?.description || "").trim()
                 ? h(
                     "p",
                     { className: "value-description value-description--ranking-inline" },
-                    capitalizeFirstLetter(desc),
+                    capitalizeFirstLetter((item?.description || "").trim()),
                   )
                 : null,
+              */
             ),
             /*
-            hasDesc
-              ? h(
-                  "button",
-                  {
-                    type: "button",
-                    className: "value-info-btn",
-                    "aria-label": `Show description for ${item?.name ?? "value"}`,
-                    onMouseDown: (event) => event.stopPropagation(),
-                    onPointerDown: (event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    },
-                  },
-                  "i",
-                )
-              : null,
+            Optional description / info button (disabled): see commented block above.
             */
           ),
         );
