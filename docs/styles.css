@@ -895,7 +895,7 @@ a.button.secondary:visited {
 
 .ranking-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   margin-bottom: var(--space-2);
   list-style: none;
@@ -958,13 +958,13 @@ body.values-sorting-active ::selection {
   box-shadow: var(--shadow-slate-sm);
 }
 
-.rank-item:hover:not(.value-card--info-visible) .value-description {
+.rank-item:not(.rank-item--inline-desc):hover:not(.value-card--info-visible) .value-description {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
 }
 
-.rank-item.value-card--info-visible {
+.rank-item:not(.rank-item--inline-desc).value-card--info-visible {
   border-color: var(--primary);
   box-shadow: var(--shadow-slate-md);
   border-bottom-left-radius: 0;
@@ -972,7 +972,7 @@ body.values-sorting-active ::selection {
   z-index: 6;
 }
 
-.rank-item.value-card--info-visible .value-description {
+.rank-item:not(.rank-item--inline-desc).value-card--info-visible .value-description {
   opacity: 1;
   transform: translateY(0);
   visibility: visible;
@@ -984,6 +984,46 @@ body.values-sorting-active ::selection {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.rank-item.rank-item--inline-desc {
+  align-items: flex-start;
+  flex: 1;
+  align-self: stretch;
+}
+
+.rank-item .rank-item-text.rank-item-text--stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.rank-item .value-description--ranking-inline {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: none;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--muted);
+  white-space: normal;
+  transition: none;
+}
+
+.rank-item.rank-item--inline-desc:hover .value-description--ranking-inline {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
 }
 
 .rank-item .value-info-btn {
@@ -1452,7 +1492,7 @@ body.values-sorting-active ::selection {
   pointer-events: none;
 }
 
-.values-sorting-active .value-description {
+.values-sorting-active .value-description:not(.value-description--ranking-inline) {
   display: none !important;
 }
 

@@ -247,65 +247,38 @@
       function ValueCard({
         item,
         listPosition,
-        openDescId,
-        setOpenDescId,
-        prefersFineHover,
-        dragListeners,
-        dragAttributes,
+        dragListeners = {},
+        dragAttributes = {},
         setNodeRef,
         style,
         isDragging = false,
         isOverlay = false,
+        uniformMinHeightPx = null,
       }) {
         const desc = (item?.description || "").trim();
         const hasDesc = desc.length > 0;
-        const nodeRef = useRef(null);
-        const lastInfoToggleTsRef = useRef(0);
-        const [infoHoverFocus, setInfoHoverFocus] = useState(false);
   
         const combinedRef = (node) => {
-          nodeRef.current = node;
           if (typeof setNodeRef === "function") {
             setNodeRef(node);
           }
         };
   
-        const touchOpen = Boolean(!prefersFineHover && hasDesc && openDescId === item.id);
-        const popoverOpen = Boolean((hasDesc && infoHoverFocus) || touchOpen);
-        const cardClass = `rank-item${popoverOpen ? " value-card--info-visible" : ""}${isDragging ? " rank-item--dragging" : ""}${isOverlay ? " rank-item--overlay" : ""}`;
-
-        function toggleTouchDescription(event) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (prefersFineHover) return;
-          const now = Date.now();
-          if (now - lastInfoToggleTsRef.current < 350) return;
-          lastInfoToggleTsRef.current = now;
-          setOpenDescId((current) => (current === item.id ? null : item.id));
+        const cardInnerStyle = {};
+        if (typeof uniformMinHeightPx === "number" && uniformMinHeightPx > 0) {
+          cardInnerStyle.minHeight = `${uniformMinHeightPx}px`;
         }
   
-        useEffect(() => {
-          if (prefersFineHover || !touchOpen) return undefined;
-  
-          const onDoc = (event) => {
-            const el = nodeRef.current;
-            if (el && !el.contains(event.target)) {
-              setOpenDescId(null);
-            }
-          };
-  
-          // Use pointer/touch down capture to close reliably on mobile.
-          document.addEventListener("pointerdown", onDoc, true);
-          document.addEventListener("touchstart", onDoc, true);
-          return () => {
-            document.removeEventListener("pointerdown", onDoc, true);
-            document.removeEventListener("touchstart", onDoc, true);
-          };
-        }, [touchOpen, prefersFineHover, setOpenDescId]);
+        const cardClass = `rank-item rank-item--inline-desc${
+          isDragging ? " rank-item--dragging" : ""
+        }${isOverlay ? " rank-item--overlay" : ""}`;
   
         const nameForA11y = capitalizeFirstLetter(item?.name ?? "");
         const pos = Number.isFinite(listPosition) ? listPosition : 0;
-        const rowLabel = pos > 0 ? `Позиция ${pos}: ${nameForA11y}` : nameForA11y;
+        const rowLabel =
+          pos > 0
+            ? `Позиция ${pos}: ${nameForA11y}${hasDesc ? `. ${capitalizeFirstLetter(desc)}` : ""}`
+            : nameForA11y;
   
         return h(
           "li",
@@ -319,12 +292,20 @@
           },
           h(
             "div",
-            { className: cardClass },
+            { className: cardClass, style: cardInnerStyle },
             h(
               "div",
-              { className: "rank-item-text" },
+              { className: "rank-item-text rank-item-text--stack" },
               h("span", { className: "value-name" }, capitalizeFirstLetter(item?.name ?? "")),
+              hasDesc
+                ? h(
+                    "p",
+                    { className: "value-description value-description--ranking-inline" },
+                    capitalizeFirstLetter(desc),
+                  )
+                : null,
             ),
+            /*
             hasDesc
               ? h(
                   "button",
@@ -332,35 +313,21 @@
                     type: "button",
                     className: "value-info-btn",
                     "aria-label": `Show description for ${item?.name ?? "value"}`,
-                    "aria-expanded": touchOpen ? "true" : "false",
-                    onMouseEnter: () => setInfoHoverFocus(true),
-                    onMouseLeave: () => setInfoHoverFocus(false),
-                    onFocus: () => setInfoHoverFocus(true),
-                    onBlur: () => setInfoHoverFocus(false),
                     onMouseDown: (event) => event.stopPropagation(),
-                    onTouchStart: toggleTouchDescription,
-                    onPointerDown: toggleTouchDescription,
-                    onClick: (event) => {
+                    onPointerDown: (event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      // On mobile we toggle on pointerdown; click may also fire and would double-toggle.
                     },
                   },
                   "i",
                 )
               : null,
-            hasDesc ? h("p", { className: "value-description" }, capitalizeFirstLetter(desc)) : null,
+            */
           ),
         );
       }
   
-      function SortableRow({
-        item,
-        index,
-        openDescId,
-        setOpenDescId,
-        prefersFineHover,
-      }) {
+      function SortableRow({ item, index, uniformMinHeightPx }) {
         const {
           attributes,
           listeners,
@@ -368,19 +335,26 @@
           transform,
           transition,
           isDragging,
-        } = useSortable({ id: item.id });
+        } = useSortable({
+          id: item.id,
+          animateLayoutChanges: () => false,
+        });
   
-        const style = {
-          transform: CSS.Transform.toString(transform),
-          transition,
-        };
+        const style = {};
+        if (transform) {
+          style.transform = CSS.Translate.toString(transform);
+        }
+        if (transition) {
+          style.transition = transition;
+        }
+        if (typeof uniformMinHeightPx === "number" && uniformMinHeightPx > 0) {
+          style.minHeight = `${uniformMinHeightPx}px`;
+        }
   
         return h(ValueCard, {
           item,
           listPosition: index + 1,
-          openDescId,
-          setOpenDescId,
-          prefersFineHover,
+          uniformMinHeightPx,
           dragListeners: listeners,
           dragAttributes: attributes,
           setNodeRef,
@@ -391,8 +365,8 @@
   
       function ValuesRankingApp({ initialItems }) {
         const [items, setItems] = useState(() => initialItems);
-        const [openDescId, setOpenDescId] = useState(null);
         const [activeId, setActiveId] = useState(null);
+        const [uniformCardMinPx, setUniformCardMinPx] = useState(null);
         const prefersFineHover = usePrefersFinePointerHover();
         const boardRef = useRef(null);
   
@@ -419,6 +393,45 @@
               : { delay: 120, tolerance: 8 },
           }),
         );
+  
+        useLayoutEffect(() => {
+          const board = boardRef.current;
+          if (!board) return undefined;
+  
+          function syncRankItemUniformHeights() {
+            if (sortDragLockActive || activeId != null) {
+              return;
+            }
+  
+            const cards = board.querySelectorAll(".ranking-list > .ranking-row .rank-item");
+            if (cards.length === 0) {
+              setUniformCardMinPx(null);
+              return;
+            }
+  
+            cards.forEach((el) => {
+              el.style.minHeight = "";
+            });
+  
+            let maxH = 0;
+            cards.forEach((el) => {
+              maxH = Math.max(maxH, el.offsetHeight);
+            });
+            if (maxH <= 0) {
+              return;
+            }
+  
+            setUniformCardMinPx((prev) => (prev === maxH ? prev : maxH));
+          }
+  
+          syncRankItemUniformHeights();
+  
+          window.addEventListener("resize", syncRankItemUniformHeights);
+  
+          return () => {
+            window.removeEventListener("resize", syncRankItemUniformHeights);
+          };
+        }, [items, activeId]);
   
         useLayoutEffect(() => {
           const board = boardRef.current;
@@ -452,17 +465,15 @@
             ro.disconnect();
             window.removeEventListener("resize", syncGutterRowHeights);
           };
-        }, [items, openDescId, activeId]);
+        }, [items, activeId, uniformCardMinPx]);
   
         function handleDragStart(event) {
           beginValuesSortDrag();
-          setOpenDescId(null);
           setActiveId(event.active.id);
         }
   
         function handleDragEnd(event) {
           endValuesSortDrag();
-          setOpenDescId(null);
   
           const { active, over } = event;
           setActiveId(null);
@@ -483,7 +494,6 @@
   
         function handleDragCancel() {
           endValuesSortDrag();
-          setOpenDescId(null);
           setActiveId(null);
         }
   
@@ -518,9 +528,7 @@
                     key: String(item.id),
                     item,
                     index,
-                    openDescId,
-                    setOpenDescId,
-                    prefersFineHover,
+                    uniformMinHeightPx: uniformCardMinPx,
                   }),
                 ),
               ),
@@ -538,9 +546,7 @@
                 ? h(ValueCard, {
                     item: activeItem,
                     listPosition: items.findIndex((x) => x.id === activeItem.id) + 1,
-                    openDescId: null,
-                    setOpenDescId: () => {},
-                    prefersFineHover,
+                    uniformMinHeightPx: uniformCardMinPx,
                     isOverlay: true,
                   })
                 : null,
